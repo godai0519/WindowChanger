@@ -39,23 +39,6 @@ namespace gui{
 	#define LABEL_1 ("キーを打ち込むことで束縛するキーボードを選択できます。")
 	#define LABEL_2 ("キーボードに束縛するウィンドウを指定してください。")
 
-	/*struct BindData{
-		BindData()
-		{
-			BindData("",NULL,"",NULL);
-		}
-		BindData(std::string Disp,HWND Binding_hWnd,std::string Binding_Name,HANDLE Binding_KeyBoard)
-		{
-			Disp=Disp;
-			Binding_hWnd=Binding_hWnd;
-			Binding_Name=Binding_Name;
-			Binding_KeyBoard=Binding_KeyBoard;
-		}
-		std::string Disp;
-		HWND Binding_hWnd;
-		std::string Binding_Name;
-		HANDLE Binding_KeyBoard;
-	};*/
 	LRESULT CALLBACK WinProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	{	
 		static const HFONT hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
@@ -244,6 +227,7 @@ namespace gui{
 				SendMessage(hKeybdUpdateButton, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
 				SendMessage(hKeyBdChk, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
 				SendMessage(hBindingList, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
+
 				break;
 			}
 		case WM_NOTIFY_CLICKED:
@@ -290,7 +274,7 @@ namespace gui{
 
 						if(vec_index == -1)
 						{
-							vec_index = SendMessage(hBindingList, LB_GETCOUNT   ,NULL,NULL);
+							vec_index = SendMessage(hBindingList, LB_GETCOUNT,NULL,NULL);
 							BindList()->push_back(manage::BindingPair());
 						}
 
@@ -460,7 +444,7 @@ namespace gui{
 							break;
 						}
 					}
-					if(!FoundBindPair)
+					if(!FoundBindPair && OldWnd)
 					{
 						util::ChangeWindow(hWnd,OldWnd);
 						OldWnd = NULL;
@@ -472,10 +456,6 @@ namespace gui{
 			}
 		case WM_DESTROY:
 			{
-				//std::ofstream ofs("text.txt");
-				//boost::archive::text_oarchive oa(ofs);
-				//oa << BindList;
-
 				ReleaseDC(hWnd , hDC);
 				Shell_NotifyIcon(NIM_DELETE, &nid);
 				DeleteObject(hFont);
