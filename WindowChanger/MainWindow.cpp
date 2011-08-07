@@ -51,10 +51,9 @@ namespace gui{
 		static HWND hApplyButton,hKeybdUpdateButton;
 		static HWND hWindowSelect,hKeyBdSelect;
 		static HWND hKeyBdChk;
-		static HANDLE Latest_Device_HID = NULL;
+		static RAWINPUT LatestDeviceRaw = RAWINPUT();
 		static std::map<std::string,HWND> WindowList;
 		static manage::BindedMng BindList;
-
 		switch(Msg)
 		{
 		case WM_PAINT:		
@@ -399,7 +398,7 @@ namespace gui{
 							{
 								flags=false;
 
-								SendMessage(hKeyBdSelect,CB_SELECTSTRING,0,(LPARAM)util::KeyBdHID(Latest_Device_HID).c_str()); //キーボードのIDでhKeyBdSelectをセレクト
+								SendMessage(hKeyBdSelect,CB_SELECTSTRING,0,(LPARAM)util::KeyBdHID(LatestDeviceRaw.header.hDevice).c_str()); //キーボードのIDでhKeyBdSelectをセレクト
 								SendMessage(hKeyBdChk,WM_SETTEXT,0,(LPARAM)"") ; //文字入力の無効化
 
 								flags=true;
@@ -428,15 +427,15 @@ namespace gui{
 				UINT dwSize = 40;
 				BYTE lpb[40];		
 				GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
-				Latest_Device_HID = ((RAWINPUT*)lpb)->header.hDevice;
+				LatestDeviceRaw = *(RAWINPUT*)lpb;
 
 				//表示されてればウィンドウ切り替え処理をしない。
 				//TODO:「某ボックスにフォーカスがあるとき」に変えたほうが良いかも
-				if(!IsWindowVisible(hWnd))
+				if(!IsWindowVisible(hWnd) && LatestDeviceRaw.data.keyboard.VKey ==VK_CONTROL)
 				{
 					for(std::vector<manage::BindingPair>::iterator it = BindList()->begin();it!=BindList()->end();++it)
 					{
-						if(it->Binding_KeyBoard == Latest_Device_HID)
+						if(it->Binding_KeyBoard == LatestDeviceRaw.header.hDevice)
 						{
 							if(OldWnd==NULL) OldWnd = GetForegroundWindow();
 							util::ChangeWindow(hWnd,it->Binding_hWnd);
