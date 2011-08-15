@@ -1,4 +1,4 @@
-#include <Windows.h>
+ï»¿#include <Windows.h>
 #include <string>
 #include <boost/format.hpp>
 #include "Util.hpp"
@@ -31,7 +31,7 @@ int input::device_list::reset()
 	UINT new_device_num_;
 	RAWINPUTDEVICELIST *new_device_list_;
 
-	//Ú‘±‚³‚ê‚Ä‚¢‚éƒfƒoƒCƒX” >> new_device_num_
+	//æŽ¥ç¶šã•ã‚Œã¦ã„ã‚‹ãƒ‡ãƒã‚¤ã‚¹æ•° >> new_device_num_
 	if(GetRawInputDeviceList(NULL,&new_device_num_,sizeof(RAWINPUTDEVICELIST)) != 0) return 1;
 	new_device_list_ = new RAWINPUTDEVICELIST[new_device_num_];
 	if(new_device_list_ == NULL) return 2;
@@ -56,21 +56,20 @@ int input::device_list::reset()
 BOOL util::ChangeWindow(HWND hWnd,HWND AfterWnd)
 {
 	BOOL res = FALSE;
+	
+	DWORD ForegroundThread,Buf,nil;
+	ForegroundThread = GetWindowThreadProcessId(GetForegroundWindow(),NULL);
 
-	DWORD Thread1,Thread2,PID,Buf,nil;
-	Thread1 = GetWindowThreadProcessId(GetForegroundWindow(),&PID);
-	Thread2 = GetCurrentThreadId();
-
-	AttachThreadInput(Thread1, Thread2, true);
+	AttachThreadInput(GetCurrentThreadId(), ForegroundThread, TRUE);
 	SystemParametersInfo(SPI_GETFOREGROUNDLOCKTIMEOUT, 0, &Buf, 0);
 	SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, &nil, 0);
 
-	if(IsIconic(hWnd)) ShowWindow(hWnd,SW_SHOW);
+	//if(IsIconic(hWnd)) ShowWindow(hWnd,SW_SHOW);
 	res |= SetForegroundWindow(AfterWnd);
 	res |= BringWindowToTop(AfterWnd);
 	SetFocus(AfterWnd);
 
 	SystemParametersInfo(SPI_SETFOREGROUNDLOCKTIMEOUT, 0, &Buf, 0);
-	AttachThreadInput(Thread2, Thread1, false);
+	AttachThreadInput(GetCurrentThreadId(), ForegroundThread, FALSE);
 	return res;
 }

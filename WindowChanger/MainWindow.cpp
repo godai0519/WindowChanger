@@ -1,14 +1,37 @@
-#include <Windows.h>
+ï»¿#include <Windows.h>
 #include <fstream>
 #include <map>
 #include <string>
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
+#include "../HookDLL/KeyBdHook.h"
 #include "Util.hpp"
 #include "SettingData.hpp"
 #include "resource.h"
+/*
+#pragma comment(linker, "/section:shared,rws")*/
+#pragma data_seg("shared")
+
+extern HHOOK hKeyHook;
+extern HINSTANCE dll_hInst;
+
+#pragma data_seg()
+#pragma comment(lib, "HookDLL.lib")
 
 HINSTANCE g_hInstance;
+
+//ä»®æƒ³ã‚­ãƒ¼ã‚³ãƒ¼ãƒ‰ã‚’ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã«é€ä¿¡ã™ã‚‹ã“ã¨ãŒã§ãã¾ã™
+void SendKey(unsigned char code)
+{
+	//INPUT input[] = {
+	//	{INPUT_KEYBOARD,code,MapVirtualKey(code,1),0,0,},
+	//	{INPUT_KEYBOARD,code,MapVirtualKey(code,1),KEYEVENTF_KEYUP,0,0}
+	//};
+	//SendInput(2, input, sizeof(INPUT));
+
+	keybd_event(code,0x00,KEYEVENTF_EXTENDEDKEY|0,0);
+	keybd_event(code,0x00,KEYEVENTF_EXTENDEDKEY|KEYEVENTF_KEYUP,0);
+}
 
 namespace gui{
 	#define WINDOW_NAME "WindowChanger"
@@ -25,6 +48,7 @@ namespace gui{
 	#define WM_USER_BIND_LIST (WM_USER+9)
 
 	HWND g_hWnd;
+	unsigned char OldVK = NULL;
 
 	namespace proc{
 		BOOL CALLBACK EnumWindowsProc(HWND hWnd, LPARAM lParam )
@@ -36,8 +60,8 @@ namespace gui{
 		}
 	}//namespace proc end
 
-	#define LABEL_1 ("ƒL[‚ğ‘Å‚¿‚Ş‚±‚Æ‚Å‘©”›‚·‚éƒL[ƒ{[ƒh‚ğ‘I‘ğ‚Å‚«‚Ü‚·B")
-	#define LABEL_2 ("ƒL[ƒ{[ƒh‚É‘©”›‚·‚éƒEƒBƒ“ƒhƒE‚ğw’è‚µ‚Ä‚­‚¾‚³‚¢B")
+	#define LABEL_1 ("ã‚­ãƒ¼ã‚’æ‰“ã¡è¾¼ã‚€ã“ã¨ã§æŸç¸›ã™ã‚‹ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã‚’é¸æŠã§ãã¾ã™ã€‚")
+	#define LABEL_2 ("ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã«æŸç¸›ã™ã‚‹ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’æŒ‡å®šã—ã¦ãã ã•ã„ã€‚")
 
 	LRESULT CALLBACK WinProc(HWND hWnd, UINT Msg, WPARAM wParam, LPARAM lParam)
 	{	
@@ -57,7 +81,7 @@ namespace gui{
 		switch(Msg)
 		{
 		case WM_PAINT:		
-				//ƒ‰ƒxƒ‹
+				//ãƒ©ãƒ™ãƒ«
 				TextOut(hDC , 10 , 150 , LABEL_1 , lstrlen(LABEL_1));
 				TextOut(hDC , 10 , 215 , LABEL_2 , lstrlen(LABEL_2));
 
@@ -68,7 +92,7 @@ namespace gui{
 				hDC = GetDC(hWnd);
 				SelectObject(hDC,hFont);
 
-				//í’“
+				//å¸¸é§
 				nid.cbSize = sizeof(NOTIFYICONDATA);
 				nid.hWnd = hWnd;
 				nid.uID = 1;
@@ -78,7 +102,7 @@ namespace gui{
 				strcpy_s(nid.szTip,0x80,WINDOW_TITLE);
 				Shell_NotifyIcon(NIM_ADD, &nid);
 
-				//RawInput‚É‚ÄWM_INPUT‚Åcatch‚Å‚«‚é‚æ‚¤‚É“o˜^
+				//RawInputã«ã¦WM_INPUTã§catchã§ãã‚‹ã‚ˆã†ã«ç™»éŒ²
 				RAWINPUTDEVICE Rid[1];
 				Rid[0].usUsagePage = 01; 
 				Rid[0].usUsage = 06; 
@@ -123,7 +147,7 @@ namespace gui{
 				);
 				hBIndUp = CreateWindow(
 					"BUTTON",
-					"ª",
+					"â†‘",
 					WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 					130, 110,
 					60, 30,
@@ -134,7 +158,7 @@ namespace gui{
 				);
 				hBindDown = CreateWindow(
 					"BUTTON",
-					"«",
+					"â†“",
 					WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
 					200, 110,
 					60, 30,
@@ -143,7 +167,7 @@ namespace gui{
 					g_hInstance,
 					NULL
 				);
-				//ƒ{ƒ^ƒ“‚Ì“o˜^
+				//ãƒœã‚¿ãƒ³ã®ç™»éŒ²
 				hApplyButton = CreateWindow(
 					"BUTTON",
 					"Apply",
@@ -167,7 +191,7 @@ namespace gui{
 					NULL
 				);
 			
-				//Window—ñ‹“
+				//Windowåˆ—æŒ™
 				hWindowSelect = CreateWindow(
 					"COMBOBOX",
 					"WindowSelect",
@@ -186,7 +210,7 @@ namespace gui{
 						SendMessage(hWindowSelect , CB_ADDSTRING ,0 , (LPARAM)it->first.c_str());
 				}
 
-				//ƒL[ƒ{[ƒh‘I‘ğ
+				//ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰é¸æŠ
 				hKeyBdSelect = CreateWindow(
 					"COMBOBOX",
 					"WindowSelect",
@@ -199,7 +223,7 @@ namespace gui{
 					NULL
 					);
 
-				//ƒL[ƒ{[ƒhƒ`ƒFƒbƒJ[—pƒGƒfƒBƒbƒgƒ{ƒbƒNƒX
+				//ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ãƒã‚§ãƒƒã‚«ãƒ¼ç”¨ã‚¨ãƒ‡ã‚£ãƒƒãƒˆãƒœãƒƒã‚¯ã‚¹
 				hKeyBdChk = CreateWindowEx(
 					WS_EX_CLIENTEDGE | SWP_FRAMECHANGED,
 					"EDIT",
@@ -213,11 +237,11 @@ namespace gui{
 					NULL
 				);
 
-				//ƒL[ƒ{[ƒh‚Ìˆê——‚ğæ“¾‚µA•\¦
+				//ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã®ä¸€è¦§ã‚’å–å¾—ã—ã€è¡¨ç¤º
 				SendMessage(hKeyBdSelect , CB_RESETCONTENT ,0 , 0);
 				util::KeyBdListUpdate(hKeyBdSelect);
 
-				//ƒtƒHƒ“ƒgØ‚è‘Ö‚¦
+				//ãƒ•ã‚©ãƒ³ãƒˆåˆ‡ã‚Šæ›¿ãˆ
 				SendMessage(hCreate, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
 				SendMessage(hDelete, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
 				SendMessage(hKeyBdSelect, WM_SETFONT, (WPARAM)hFont, MAKELPARAM(FALSE, 0));
@@ -241,12 +265,12 @@ namespace gui{
 					POINT pt;
 					GetCursorPos( &pt );
 
-					// ƒŠƒ\[ƒX‚æ‚èƒƒjƒ…[‚ğƒ[ƒh
+					// ãƒªã‚½ãƒ¼ã‚¹ã‚ˆã‚Šãƒ¡ãƒ‹ãƒ¥ãƒ¼ã‚’ãƒ­ãƒ¼ãƒ‰
 					hMenu = LoadMenu( g_hInstance, MAKEINTRESOURCE(IDR_MENU1) );
 					hSubMenu = GetSubMenu( hMenu, 0 );
 					SetForegroundWindow( hWnd );
 
-					// ƒ|ƒbƒvƒAƒbƒvƒƒjƒ…[‚ğ•\¦
+					// ãƒãƒƒãƒ—ã‚¢ãƒƒãƒ—ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã‚’è¡¨ç¤º
 					TrackPopupMenu( hSubMenu, TPM_BOTTOMALIGN, pt.x, pt.y, 0, hWnd, NULL );
 					DestroyMenu( hMenu );
 				}
@@ -254,7 +278,7 @@ namespace gui{
 			}
 		case WM_CLOSE:
 			{
-				//‰Â‹ó‘Ô‚È‚çƒ^ƒXƒNƒgƒŒƒC‚Éû”[
+				//å¯è¦–çŠ¶æ…‹ãªã‚‰ã‚¿ã‚¹ã‚¯ãƒˆãƒ¬ã‚¤ã«åç´
 				if(IsWindowVisible(hWnd)==TRUE)
 				{
 					ShowWindow(hWnd,SW_HIDE);
@@ -281,22 +305,22 @@ namespace gui{
 						int keybd_index = (int)SendMessage(hKeyBdSelect, CB_GETCURSEL ,NULL,NULL);
 						if(win_index==-1 || keybd_index==-1) 
 						{
-							MessageBox(hWnd,"ƒL[ƒ{[ƒh‚ÆƒEƒBƒ“ƒhƒE‚ğ‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢B","’ˆÓ",MB_OK | MB_ICONEXCLAMATION | MB_DEFBUTTON1);
+							MessageBox(hWnd,"ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã¨ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’é¸æŠã—ã¦ãã ã•ã„ã€‚","æ³¨æ„",MB_OK | MB_ICONEXCLAMATION | MB_DEFBUTTON1);
 							break;
 						}
 
-						//‘I‘ğƒEƒBƒ“ƒhƒE‚ğ’Šo
+						//é¸æŠã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚’æŠ½å‡º
 						SendMessage(hWindowSelect, CB_GETLBTEXT,win_index,(LPARAM)str);
 						BindList[vec_index]->Binding_Name = str;
 						BindList[vec_index]->Binding_hWnd = WindowList[str];
 
-						//‘I‘ğƒL[ƒ{[ƒh‚ğ’Šo
+						//é¸æŠã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã‚’æŠ½å‡º
 						SendMessage(hKeyBdSelect, CB_GETLBTEXT,keybd_index,(LPARAM)str);
 						BindList[vec_index]->Binding_KeyBoard = (HANDLE)std::strtol(((std::string)str).substr(((std::string)"HID of KeyBoard : ").size()).c_str(), NULL, 16);
 
 						if(begin_index != -1)
 						{
-							//‘I‘ğ‚³‚ê‚Ä‚½‚Ì‚È‚çŒÃ‚¢•¨‚ğÁ‚³‚È‚­‚¿‚áB
+							//é¸æŠã•ã‚Œã¦ãŸã®ãªã‚‰å¤ã„ç‰©ã‚’æ¶ˆã•ãªãã¡ã‚ƒã€‚
 							SendMessage(hBindingList,LB_DELETESTRING,vec_index,NULL);
 						}
 						SendMessage(hBindingList,LB_INSERTSTRING,vec_index,(LPARAM)util::BindListText(BindList[vec_index]->Binding_KeyBoard,BindList[vec_index]->Binding_Name).c_str());
@@ -327,7 +351,7 @@ namespace gui{
 				case WM_USER_DELETE_BUTTON:
 					{
 						int index = SendMessage(hBindingList, LB_GETCURSEL ,NULL ,NULL);
-						if(index == -1) MessageBox(hWnd,"‘I‘ğ‚µ‚Ä‚­‚¾‚³‚¢B","’ˆÓ",MB_OK | MB_ICONEXCLAMATION | MB_DEFBUTTON1);
+						if(index == -1) MessageBox(hWnd,"é¸æŠã—ã¦ãã ã•ã„ã€‚","æ³¨æ„",MB_OK | MB_ICONEXCLAMATION | MB_DEFBUTTON1);
 						else
 						{
 							BindList()->erase(BindList()->begin()+index);
@@ -393,13 +417,13 @@ namespace gui{
 						switch(HIWORD(wParam))
 						{
 						case EN_UPDATE:
-							static bool flags = true; //ƒ‹[ƒv‚É‚æ‚éƒXƒ^ƒbƒNƒI[ƒo[ƒtƒ[‚ğ‰ñ”ğ‚·‚é
+							static bool flags = true; //ãƒ«ãƒ¼ãƒ—ã«ã‚ˆã‚‹ã‚¹ã‚¿ãƒƒã‚¯ã‚ªãƒ¼ãƒãƒ¼ãƒ•ãƒ­ãƒ¼ã‚’å›é¿ã™ã‚‹
 							if(flags)
 							{
 								flags=false;
 
-								SendMessage(hKeyBdSelect,CB_SELECTSTRING,0,(LPARAM)util::KeyBdHID(LatestDeviceRaw.header.hDevice).c_str()); //ƒL[ƒ{[ƒh‚ÌID‚ÅhKeyBdSelect‚ğƒZƒŒƒNƒg
-								SendMessage(hKeyBdChk,WM_SETTEXT,0,(LPARAM)"") ; //•¶š“ü—Í‚Ì–³Œø‰»
+								SendMessage(hKeyBdSelect,CB_SELECTSTRING,0,(LPARAM)util::KeyBdHID(LatestDeviceRaw.header.hDevice).c_str()); //ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã®IDã§hKeyBdSelectã‚’ã‚»ãƒ¬ã‚¯ãƒˆ
+								SendMessage(hKeyBdChk,WM_SETTEXT,0,(LPARAM)"") ; //æ–‡å­—å…¥åŠ›ã®ç„¡åŠ¹åŒ–
 
 								flags=true;
 							}
@@ -408,7 +432,7 @@ namespace gui{
 					}
 				case ID_EXIT:
 					{
-						DestroyWindow(hWnd); //Window‚ğ•Â‚¶‚é
+						DestroyWindow(hWnd); //Windowã‚’é–‰ã˜ã‚‹
 					}
 				}
 				break;
@@ -422,35 +446,57 @@ namespace gui{
 			{
 				static bool FoundBindPair = false;
 				static HWND OldWnd=NULL;
+				//static bool changed = false;
 
-				//RawInput‚É‚æ‚è“ü—Í‚³‚ê‚½ƒL[ƒ{[ƒh‚ğæ“¾
+				//RawInputã«ã‚ˆã‚Šå…¥åŠ›ã•ã‚ŒãŸã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã‚’å–å¾—
 				UINT dwSize = 40;
 				BYTE lpb[40];		
 				GetRawInputData((HRAWINPUT)lParam, RID_INPUT, lpb, &dwSize, sizeof(RAWINPUTHEADER));
 				LatestDeviceRaw = *(RAWINPUT*)lpb;
 
-				//•\¦‚³‚ê‚Ä‚ê‚ÎƒEƒBƒ“ƒhƒEØ‚è‘Ö‚¦ˆ—‚ğ‚µ‚È‚¢B
-				//TODO:u–^ƒ{ƒbƒNƒX‚ÉƒtƒH[ƒJƒX‚ª‚ ‚é‚Æ‚«v‚É•Ï‚¦‚½‚Ù‚¤‚ª—Ç‚¢‚©‚à
-				if(!IsWindowVisible(hWnd) && LatestDeviceRaw.data.keyboard.VKey ==VK_CONTROL)
+				static bool processing = false;
+				
+				if(!processing)
 				{
-					for(std::vector<manage::BindingPair>::iterator it = BindList()->begin();it!=BindList()->end();++it)
-					{
-						if(it->Binding_KeyBoard == LatestDeviceRaw.header.hDevice)
-						{
-							if(OldWnd==NULL) OldWnd = GetForegroundWindow();
-							util::ChangeWindow(hWnd,it->Binding_hWnd);
-							FoundBindPair=true;
-							break;
-						}
-					}
-					if(!FoundBindPair && OldWnd)
-					{
-						util::ChangeWindow(hWnd,OldWnd);
-						OldWnd = NULL;
-					}
-				}
-				FoundBindPair = false;
+					processing = true;
 
+					//è¡¨ç¤ºã•ã‚Œã¦ã‚Œã°ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦åˆ‡ã‚Šæ›¿ãˆå‡¦ç†ã‚’ã—ãªã„ã€‚
+					if(!IsWindowVisible(hWnd) && LatestDeviceRaw.data.keyboard.VKey !=VK_BACK)
+					{
+						for(std::vector<manage::BindingPair>::iterator it = BindList()->begin(),end = BindList()->end();it!=end;++it)
+						{
+							//ãƒšã‚¢ã®ä¸­ã«è©²å½“ã™ã‚‹ã‚‚ã®ãŒã‚ã‚Œã°(ã‚­ãƒ¼ãƒœãƒ¼ãƒ‰ã§æ¢ç´¢)
+							if(it->Binding_KeyBoard == LatestDeviceRaw.header.hDevice)
+							{
+								//æœ€åˆã¯ä¿å­˜
+								if(OldWnd==NULL) OldWnd = GetForegroundWindow(); 
+
+								//ç›®çš„ã®ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãŒä»Šæœ€å‰é¢ã§ãªã‘ã‚Œã°
+								if(it->Binding_hWnd != GetForegroundWindow())
+								{
+									Sleep(10);
+									SendKey(VK_BACK);
+									Sleep(10);
+									util::ChangeWindow(hWnd,it->Binding_hWnd);
+									//Sleep(100);
+									//SendKey(gui::OldVK);
+								}
+								FoundBindPair=true;
+								break;
+							}
+						}
+						if(!FoundBindPair && OldWnd)
+						{
+							Sleep(10);
+							SendKey(VK_BACK);
+							Sleep(10);
+							util::ChangeWindow(hWnd,OldWnd);
+							OldWnd = NULL;
+						}
+						FoundBindPair = false;
+					}
+					processing = false;
+				}
 				break;
 			}
 		case WM_DESTROY:
@@ -491,7 +537,7 @@ namespace gui{
 			((GetSystemMetrics( SM_CXSCREEN ) - 400 ) / 2), 
 			((GetSystemMetrics( SM_CYSCREEN ) - 400 ) / 2), 
 			400, 
-			400, 
+			350, 
 			NULL, 
 			NULL, 
 			hInstance, 
@@ -512,13 +558,29 @@ namespace gui{
 	}
 }
 
+LRESULT __stdcall KeyBdHookProc(int nCode,WPARAM wParam,LPARAM lParam)
+{
+	if (nCode < 0)
+		return CallNextHookEx(hKeyHook, nCode, wParam, lParam);
+
+	gui::OldVK = (unsigned char)wParam;
+
+	return CallNextHookEx(hKeyHook, nCode, wParam, lParam );
+}
+
 int WINAPI WinMain(
 	HINSTANCE hInstance,
 	HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine,
 	int nCmdShow
 	)
-{	
+{
 	g_hInstance = hInstance;
-	return gui::Create(hInstance);
+
+	BOOL err = true;
+
+	SetKeyBdHook(KeyBdHookProc);
+	gui::Create(hInstance);
+	ResetKeyBdHook();
+	return err;
 }

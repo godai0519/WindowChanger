@@ -1,4 +1,4 @@
-#include <Windows.h>
+ï»¿#include <Windows.h>
 
 namespace input{
 	static enum device_type{Mouse_Type , KeyBoard_Type , HID_Type, ALL};
@@ -37,7 +37,7 @@ namespace input{
 			UINT new_device_num_;
 			RAWINPUTDEVICELIST *new_device_list_;
 
-			//Ú‘±‚³‚ê‚Ä‚¢‚éƒfƒoƒCƒX” >> new_device_num_
+			//æ¥ç¶šã•ã‚Œã¦ã„ã‚‹ãƒ‡ãƒã‚¤ã‚¹æ•° >> new_device_num_
 			if(GetRawInputDeviceList(NULL,&new_device_num_,sizeof(RAWINPUTDEVICELIST)) != 0) return 1;
 			new_device_list_ = new RAWINPUTDEVICELIST[new_device_num_];
 			if(new_device_list_ == NULL) return 2;
@@ -59,8 +59,8 @@ namespace input{
 			}
 			else
 			{
-				//w’è‚³‚ê‚½ƒfƒoƒCƒX‚Ì”²‚«o‚µˆ—
-				//TODO : ‚³‚ç‚É‚‘¬‰»‚ª–]‚ß‚é
+				//æŒ‡å®šã•ã‚ŒãŸãƒ‡ãƒã‚¤ã‚¹ã®æŠœãå‡ºã—å‡¦ç†
+				//TODO : ã•ã‚‰ã«é«˜é€ŸåŒ–ãŒæœ›ã‚ã‚‹
 				device_num_=0;
 				for(UINT i=0;i<new_device_num_;++i) if(new_device_list_[i].dwType == TYPE) ++device_num_;
 				device_list_ = new RAWINPUTDEVICELIST[device_num_];
@@ -72,7 +72,7 @@ namespace input{
 						++j;
 					}
 				}
-				//‚±‚±‚Ü‚ÅiTODO : ‚³‚ç‚É‚‘¬‰»‚ª–]‚ß‚éj
+				//ã“ã“ã¾ã§ï¼ˆTODO : ã•ã‚‰ã«é«˜é€ŸåŒ–ãŒæœ›ã‚ã‚‹ï¼‰
 			}
 
 			return 0;

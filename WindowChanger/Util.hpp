@@ -1,4 +1,4 @@
-#include <string>
+ï»¿#include <string>
 
 namespace input{
 	static enum device_type{Mouse_Type , KeyBoard_Type , HID_Type, ALL};
@@ -32,11 +32,11 @@ namespace util{
 
 		devices.reset();
 			
-		//ƒTƒCƒYæ“¾
+		//ã‚µã‚¤ã‚ºå–å¾—
 		size_t size;
 		devices(NULL,size);
 	
-		//ƒTƒCƒY‚É‚æ‚è—ÌˆæŠm•Û‚¨‚æ‚Ñ‘ã“ü
+		//ã‚µã‚¤ã‚ºã«ã‚ˆã‚Šé ˜åŸŸç¢ºä¿ãŠã‚ˆã³ä»£å…¥
 		RAWINPUTDEVICELIST *raws = new RAWINPUTDEVICELIST[size];
 		devices(raws,size);
 
